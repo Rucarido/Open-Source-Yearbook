@@ -6,7 +6,7 @@ app = FastAPI()
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uri = "mongodb+srv://lemon:2007aakash22@cluster0.bbhijse.mongodb.net/?appName=Cluster0"
+uri = "mongodb+srv://<dbname>:<password>@cluster0.bbhijse.mongodb.net/?appName=Cluster0"
 
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
@@ -74,4 +74,5 @@ async def yearbook_page(current_user: dict = Depends(get_current_user)):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
