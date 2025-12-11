@@ -1,8 +1,11 @@
 import os
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
-#MONGO_URI = os.getenv("MONGO_URI", "<mongoDB cluster url")  # Set env var for security
+load_dotenv()
 
-client = MongoClient("<mongoDB cluster url>")
+MONGO_URL = os.getenv("MONGO_URL")  # Set env var for security
+
+client = MongoClient(MONGO_URL)
 db = client["yearbook_db"]  # Database name
 users_collection = db["users"]
