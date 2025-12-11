@@ -4,6 +4,7 @@ pymongo
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+python-dotenv
 
 #running backend:- uvicorn main:app --reload
 #venv setup: .\venv\Scripts\Activate.ps1

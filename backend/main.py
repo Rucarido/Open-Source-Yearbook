@@ -1,4 +1,4 @@
-'''
+
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -17,7 +17,7 @@ try:
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(e)
-'''
+
 
 from auth import ACCESS_TOKEN_EXPIRE_MINUTES
 
