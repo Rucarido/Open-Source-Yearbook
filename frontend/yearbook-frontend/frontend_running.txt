@@ -1,0 +1,9 @@
+#FRONTEND RUNNING TERMINAL
+
+npx create-react-app yearbook-frontend
+cd yearbook-frontend
+npm install axios react-router-dom tailwindcss postcss autoprefixer
+npm install -D tailwindcss@3 postcss autoprefixer #for version stabilization
+npx tailwindcss init -p
+
+Proceed with npm start
