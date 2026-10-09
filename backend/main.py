@@ -1,39 +1,35 @@
-'''
-from fastapi import FastAPI
-
-app = FastAPI()
-
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-
-uri = "mongodb+srv://lemon:2007aakash22@cluster0.bbhijse.mongodb.net/?appName=Cluster0"
-
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
-
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-'''
-
 from auth import ACCESS_TOKEN_EXPIRE_MINUTES
 
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-import os
-import shutil
+from io import BytesIO
 from pathlib import Path
-from models import UserCreate, UserInDB, ProfileCreate
+from uuid import uuid4
+from PIL import Image, UnidentifiedImageError
+from models import UserCreate, User, ProfileCreate
 from database import users_collection, profiles_collection
 from auth import verify_password, get_password_hash, create_access_token, get_current_user
 
 app = FastAPI(title="Yearbook Auth API")
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "static" / "uploads"
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_DIMENSION = 4096
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+}
+IMAGE_FORMAT_EXTENSIONS = {
+    "JPEG": ".jpg",
+    "PNG": ".png",
+    "GIF": ".gif",
+    "WEBP": ".webp",
+}
 
 # CORS for React frontend (adjust origins in prod)
 app.add_middleware(
@@ -44,11 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create static/uploads directory if it doesn't exist
-Path("static/uploads").mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Use absolute paths so the API works regardless of the shell's current directory.
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-@app.post("/register", response_model=UserInDB)
+@app.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate):
     db_user = users_collection.find_one({"email": user.email})
     if db_user:
@@ -57,7 +53,7 @@ async def register(user: UserCreate):
     user_dict = {"email": user.email, "hashed_password": hashed_password}
     result = users_collection.insert_one(user_dict)
     user_id = str(result.inserted_id)  # Extract ID separately
-    return UserInDB(**user_dict, id=user_id)  # Pass ID explicitly
+    return User(email=user.email, id=user_id)
 
 @app.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -144,20 +140,42 @@ async def get_my_profiles(current_user: dict = Depends(get_current_user)):
     return profiles
 
 @app.post("/upload")
-async def upload_image(file: UploadFile = File(...)):
+async def upload_image(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
     try:
-        if not file.content_type.startswith("image/"):
-             raise HTTPException(status_code=400, detail="File must be an image")
-        
-        file_location = f"static/uploads/{file.filename}"
-        with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        # Return the URL
-        return {"url": f"http://localhost:8000/{file_location}"}
-    except Exception as e:
-        print(e)
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=400, detail="Only JPEG, PNG, GIF, and WebP images are supported")
+
+        contents = await file.read(MAX_UPLOAD_BYTES + 1)
+        if not contents:
+            raise HTTPException(status_code=400, detail="Image file is empty")
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Image must be 5 MB or smaller")
+
+        try:
+            image = Image.open(BytesIO(contents))
+            image.verify()
+            image = Image.open(BytesIO(contents))
+            extension = IMAGE_FORMAT_EXTENSIONS.get(image.format)
+            if not extension:
+                raise HTTPException(status_code=400, detail="Unsupported image format")
+            if image.width > MAX_IMAGE_DIMENSION or image.height > MAX_IMAGE_DIMENSION:
+                raise HTTPException(status_code=400, detail="Image dimensions must be 4096px or smaller")
+        except UnidentifiedImageError as exc:
+            raise HTTPException(status_code=400, detail="Uploaded file is not a valid image") from exc
+
+        filename = f"{uuid4().hex}{extension}"
+        (UPLOADS_DIR / filename).write_bytes(contents)
+        return {"url": f"{str(request.base_url).rstrip('/')}/static/uploads/{filename}"}
+    except HTTPException:
+        raise
+    except OSError as exc:
         raise HTTPException(status_code=500, detail="Image upload failed")
+    finally:
+        await file.close()
 
 @app.delete("/profile/{profile_id}", response_model=dict)
 async def delete_profile(profile_id: str, current_user: dict = Depends(get_current_user)):

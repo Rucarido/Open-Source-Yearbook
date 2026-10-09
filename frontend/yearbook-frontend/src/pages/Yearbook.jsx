@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileCard from '../components/ProfileCard';
 import ProfileModal from '../components/ProfileModal';
 import EditProfileForm from '../components/EditProfileForm';
 import Background3D from '../components/Background3D';
+import { apiUrl } from '../api';
 
 const Yearbook = () => {
   const navigate = useNavigate();
@@ -20,9 +21,9 @@ const Yearbook = () => {
   const token = localStorage.getItem('token');
   const isLoggedIn = !!token;
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8000/yearbook');
+      const response = await fetch(apiUrl('/yearbook'));
       if (response.ok) {
         const data = await response.json();
         setProfiles(data);
@@ -32,12 +33,12 @@ const Yearbook = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchMyProfiles = async () => {
+  const fetchMyProfiles = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch('http://localhost:8000/profile/me', {
+      const response = await fetch(apiUrl('/profile/me'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -49,12 +50,12 @@ const Yearbook = () => {
     } catch (error) {
       console.error("Error fetching my profiles", error);
     }
-  }
+  }, [token]);
 
   useEffect(() => {
     fetchProfiles();
     fetchMyProfiles();
-  }, []);
+  }, [fetchMyProfiles, fetchProfiles]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -91,7 +92,7 @@ const Yearbook = () => {
           YEARBOOK <span className='text-pink-500'>2025</span>
         </h1>
         <div className="flex gap-6 md:gap-8 text-gray-300 items-center text-sm md:text-base font-medium">
-          <a href="#" onClick={handleHomeClick} className="hover:text-white transition-colors">Home</a>
+            <button onClick={handleHomeClick} className="hover:text-white transition-colors">Home</button>
           <a href="#years" className="hover:text-white transition-colors">Explore</a>
 
           {isLoggedIn ? (
@@ -105,7 +106,7 @@ const Yearbook = () => {
               <button onClick={handleLogout} className="hover:text-white transition-colors">Logout</button>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} className="hover:text-white transition-colors">Login</button>
+            <button onClick={() => navigate('/')} className="hover:text-white transition-colors">Login</button>
           )}
         </div>
       </nav>

@@ -152,12 +152,12 @@ export default function StarryBackground({ children }) {
                             className="star"
                             style={
                                 ({
-                                    ["--top-offset"]: s.topOffset,
-                                    ["--star-tail-length"]: s.tailLength,
-                                    ["--fall-duration"]: s.duration,
-                                    ["--fall-delay"]: s.delay,
-                                    ["--star-tail-height"]: s.tailHeight,
-                                    ["--star-width"]: s.width,
+                                    "--top-offset": s.topOffset,
+                                    "--star-tail-length": s.tailLength,
+                                    "--fall-duration": s.duration,
+                                    "--fall-delay": s.delay,
+                                    "--star-tail-height": s.tailHeight,
+                                    "--star-width": s.width,
                                 })
                             }
                         />

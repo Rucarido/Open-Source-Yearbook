@@ -23,7 +23,7 @@ Access tokens expire after 30 minutes. There is no refresh-token flow.
 | `GET` | `/profile/me` | Yes | List profiles owned by the current user |
 | `PUT` | `/profile/{profile_id}` | Yes, owner | Update an owned profile |
 | `DELETE` | `/profile/{profile_id}` | Yes, owner | Delete an owned profile |
-| `POST` | `/upload` | No currently | Store an image and return its URL |
+| `POST` | `/upload` | Yes | Store a validated image and return its URL |
 | `GET` | `/static/...` | No | Serve local static files |
 
 ## Request and Response Examples
@@ -40,7 +40,7 @@ Content-Type: application/json
 }
 ```
 
-Returns `200 OK` with the created user representation. The current implementation includes `hashed_password` in this response; this should be removed before production use.
+Passwords must be 8 to 128 characters. The endpoint returns `201 Created` with the created user's `id` and `email`. Password hashes are never returned.
 
 ### Login
 
@@ -96,6 +96,7 @@ Content-Type: application/json
 
 ```http
 POST /upload
+Authorization: Bearer <jwt>
 Content-Type: multipart/form-data
 
 file=<image bytes>
@@ -109,7 +110,7 @@ Response:
 }
 ```
 
-The current endpoint checks only the declared MIME type and does not require authentication. See `docs/SECURITY.md` for the risks.
+The endpoint requires authentication, accepts JPEG, PNG, GIF, and WebP files, verifies image bytes, limits uploads to 5 MB, limits dimensions to 4096px, and generates a server-side filename.
 
 ### Profile response shape
 

@@ -1,41 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import AuthForm from '../components/AuthForm';
 import logo from '../assets/logo.jpg';
+import { apiUrl } from '../api';
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
   const handleAuthSubmit = async (formData) => {
     const endpoint = isRegister ? '/register' : '/login';
+    setSuccessMessage('');
     const headers = isRegister
       ? { 'Content-Type': 'application/json' }  // JSON for register
       : { 'Content-Type': 'application/x-www-form-urlencoded' };  // Form for login
 
     try {
-      const response = await axios.post(`http://localhost:8000${endpoint}`, formData, { headers });
+      const response = await fetch(apiUrl(endpoint), {
+        method: 'POST',
+        headers,
+        body: isRegister ? JSON.stringify(formData) : new URLSearchParams(formData),
+      });
+      const data = await response.json();
 
-      // For login/register response handling
+      if (!response.ok) {
+        throw new Error(formatError(data.detail));
+      }
+
       if (endpoint === '/login') {
-        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem('token', data.access_token);
+        navigate('/yearbook');
+      } else {
+        setIsRegister(false);
+        setSuccessMessage('Account created. Sign in to continue.');
       }
-      // For register, no token needed yet (user can login after)
-
-      navigate('/yearbook');
     } catch (err) {
-      // Handle error display: Stringify if it's an array/object for safe rendering
-      let errorMsg = 'Something went wrong';
-      if (err.response?.data?.detail) {
-        if (Array.isArray(err.response.data.detail)) {
-          // Common for validation: Join messages
-          errorMsg = err.response.data.detail.map(e => e.msg).join(', ');
-        } else {
-          errorMsg = err.response.data.detail;
-        }
-      }
-      throw new Error(errorMsg);  // Re-throw for AuthForm to catch
+      throw new Error(err.message || 'Something went wrong');
     }
   };
 
@@ -53,10 +54,14 @@ const Login = () => {
           {isRegister ? 'Register' : 'Login'} <span className="text-blue-300"> to Yearbook</span>
         </h2>
         <AuthForm onSubmit={handleAuthSubmit} isRegister={isRegister} />
+        {successMessage && <p className="mt-4 text-center text-green-300 text-sm">{successMessage}</p>}
         <p className="text-center mt-4 text-gray-300">
           {isRegister ? 'Already have an account?' : "Don't have an account?"}
           <button
-            onClick={() => setIsRegister(!isRegister)}
+            onClick={() => {
+              setIsRegister(!isRegister);
+              setSuccessMessage('');
+            }}
             className="text-blue-300 ml-1 hover:text-blue-100 font-semibold hover:underline"
           >
             {isRegister ? 'Login' : 'Register'}
@@ -65,6 +70,11 @@ const Login = () => {
       </div>
     </div>
   );
+};
+
+const formatError = (detail) => {
+  if (Array.isArray(detail)) return detail.map((error) => error.msg).join(', ');
+  return detail || 'Something went wrong';
 };
 
 export default Login;

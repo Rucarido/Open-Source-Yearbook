@@ -23,7 +23,8 @@ The browser owns the presentation state and stores the JWT in `localStorage`. Fa
 The frontend is a Create React App application under `frontend/yearbook-frontend`.
 
 - `src/App.js` defines the two routes: `/` for authentication and `/yearbook` for the protected yearbook screen.
-- `src/pages/Login.jsx` switches between registration and login and sends requests with Axios.
+- `src/api.js` centralizes the API base URL from `REACT_APP_API_URL`.
+- `src/pages/Login.jsx` switches between registration and login and sends requests with Fetch API.
 - `src/pages/Yearbook.jsx` loads public profiles and the current user's profiles, then coordinates modals and refreshes.
 - `src/components/AuthForm.jsx` owns the email/password form.
 - `src/components/ProtectedRoute.jsx` performs the client-side token presence check.
@@ -32,7 +33,7 @@ The frontend is a Create React App application under `frontend/yearbook-frontend
 - `src/components/ProfileModal.jsx` renders a selected profile in detail.
 - `src/components/StarryBackground.jsx` and `src/components/Background3D.jsx` provide decorative visual layers.
 
-The app currently uses both Axios and the native Fetch API. API URLs are repeated as `http://localhost:8000` literals instead of being centralized in a client module.
+The app uses a small Fetch API client helper. Its default API address is `http://localhost:8000`, which can be changed with `REACT_APP_API_URL`.
 
 ## Backend Structure
 
@@ -66,8 +67,8 @@ The current backend is intentionally flat. This makes the project easy to unders
 ### Image upload
 
 1. The profile form sends a multipart request to `POST /upload`.
-2. The API checks that the declared content type starts with `image/`.
-3. The file is written to `backend/static/uploads`.
+2. The authenticated API request accepts supported image types, verifies image bytes, and enforces size and dimension limits.
+3. The file is assigned a server-generated filename and written to `backend/static/uploads`.
 4. The API returns a URL such as `http://localhost:8000/static/uploads/<filename>`.
 5. The profile stores that URL in `photo_url`.
 
@@ -109,7 +110,6 @@ The API converts MongoDB `_id` to a string `id` in responses. Profile ownership 
 
 ## Architectural Follow-ups
 
-- Centralize the frontend API base URL and request/auth error handling.
 - Add a backend router/service/repository split as features grow.
 - Add MongoDB indexes on `users.email`, `profiles.email`, and any future query fields.
 - Add pagination and filtering to `GET /yearbook`.

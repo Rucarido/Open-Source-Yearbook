@@ -9,7 +9,7 @@ This document describes the security posture of the current codebase. It is an e
 - Protected profile operations derive the owner from the JWT rather than accepting an owner id from the client.
 - Update and delete queries include the authenticated user's email to enforce ownership.
 - CORS is limited to three local development origins.
-- Environment variables are used for the MongoDB URI and JWT signing key.
+- Environment variables are used for the MongoDB URI and JWT signing key; the API refuses to start without `SECRET_KEY`.
 
 ## High-Priority Risks
 
@@ -17,18 +17,10 @@ This document describes the security posture of the current codebase. It is an e
 
 Never commit `MONGO_URI`, hosted database credentials, or a production `SECRET_KEY`. Use process environment variables or a managed secret store. Rotate any credential that has previously been committed or shared.
 
-### Remove password hashes from registration responses
-
-`POST /register` currently returns `UserInDB`, whose response includes `hashed_password`. Password hashes must never be sent to clients. Return a public user schema containing only the id and email.
-
 ### Secure image uploads
 
-`POST /upload` currently has no authentication and uses the client-provided filename. Before public deployment:
+`POST /upload` requires authentication, generates a server-side filename, verifies image bytes, and enforces type, size, and dimension limits. Before public deployment:
 
-- Require authentication.
-- Generate a random server-side filename.
-- Validate content by inspecting file bytes, not only the declared MIME type.
-- Enforce file size and image dimension limits.
 - Store files outside the application process or in object storage.
 - Prevent path traversal and filename collisions.
 - Remove orphaned files when a profile is deleted or its photo changes.
@@ -43,7 +35,7 @@ Profile social links and `photo_url` are rendered as external links or image sou
 
 ## Additional Hardening
 
-- Review `npm audit` output before releases. The current dependency tree reports known vulnerabilities in production dependencies, including Axios and its transitive packages; do not treat a successful frontend build as a security approval.
+- Review `npm audit` output before releases. The current React Router 6 dependency has moderate advisories whose available fix is a breaking upgrade to React Router 7; plan and test that migration rather than applying it blindly.
 - Add rate limiting and account lockout or abuse detection to registration and login.
 - Add HTTPS and secure deployment headers.
 - Replace `localStorage` token storage with a carefully designed secure cookie strategy if the threat model requires stronger XSS resistance.

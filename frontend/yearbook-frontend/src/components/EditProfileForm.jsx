@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../api';
 
 const EditProfileForm = ({ currentProfile, onClose, onSave }) => {
     const [formData, setFormData] = useState({
@@ -47,8 +48,10 @@ const EditProfileForm = ({ currentProfile, onClose, onSave }) => {
         formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8000/upload', {
+            const token = localStorage.getItem('token');
+            const response = await fetch(apiUrl('/upload'), {
                 method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,
             });
 
@@ -69,7 +72,7 @@ const EditProfileForm = ({ currentProfile, onClose, onSave }) => {
         setLoading(true);
         const token = localStorage.getItem('token');
         try {
-            const url = `http://localhost:8000/profile/${currentProfile.id}`;
+            const url = apiUrl(`/profile/${currentProfile.id}`);
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
@@ -111,8 +114,8 @@ const EditProfileForm = ({ currentProfile, onClose, onSave }) => {
         try {
             const isUpdate = currentProfile && currentProfile.id;
             const url = isUpdate
-                ? `http://localhost:8000/profile/${currentProfile.id}`
-                : 'http://localhost:8000/profile';
+                ? apiUrl(`/profile/${currentProfile.id}`)
+                : apiUrl('/profile');
             const method = isUpdate ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
